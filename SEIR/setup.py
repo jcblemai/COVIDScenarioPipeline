@@ -32,7 +32,15 @@ class SpatialSetup:
         if len(self.nodenames) != len(set(self.nodenames)):
             raise ValueError(f"There are duplicate nodenames in geodata.")
 
-        self.mobility = scipy.sparse.csr_matrix(np.loadtxt(mobility_file)) # K x K matrix of people moving
+        if ('.txt' in mobility_file):
+            print('Mobility files as matrices are not recommended. Please switch soon to long form csv files.')
+            self.mobility = scipy.sparse.csr_matrix(np.loadtxt(mobility_file)) # K x K matrix of people moving
+        elif ('.csv' in mobility_file):
+            print('Mobility files as matrices are not recommended. Please switch soon to long form csv files.')
+            self.mobility = scipy.sparse.csr_matrix(np.loadtxt(mobility_file)) # K x K matrix of people moving
+        else:
+            raise ValueError(f"Mobility data must either be a .csv file in longform (recommended) or a .txt matrix file. Got {mobility_file}")
+
 
         # Validate mobility data
         if self.mobility.shape != (self.nnodes, self.nnodes):
@@ -158,14 +166,25 @@ def parameters_quick_draw(p_config, global_config, nt_inter, nnodes, dt, R0s, se
     sigma = p_config["sigma"].as_evaled_expression()
     gamma_val = p_config["gamma"].as_random_distribution()() * n_Icomp
     gamma = gamma_val*np.ones((nt_inter, nnodes))
-    if ('Test' in setupname):
-        ds = datetime.date(2020, 4, 19)
-        nday = (ds - global_config["start_date"].as_date()).days
-        idx = nday/dt
-        gamma[int(idx):,:] = 0.5*(2*gamma_val) + 0.5*gamma_val
+
+    # Contact Tracing S1: 60% of secondary cases get removed after 50% of time infected
+    # Contact Tracing S2: 30% of secondary cases get removed after 65% of time infected
 
     #R0s = p_config["R0s"].as_random_distribution()()
     beta = R0s * gamma_val / n_Icomp
+
+    if ('TestIsolate1' in setupname):
+        ds = datetime.date(2020, 5, 1)
+        nday = (ds - global_config["start_date"].as_date()).days
+        idx = nday/dt
+        gamma[int(idx):,:] = 0.6*(gamma_val/0.5) + 0.4*gamma_val
+
+    if ('TestIsolate2' in setupname):
+        ds = datetime.date(2020, 5, 1)
+        nday = (ds - global_config["start_date"].as_date()).days
+        idx = nday/dt
+        gamma[int(idx):,:] = 0.3*(gamma_val/0.65) + 0.70*gamma_val
+
 
     #beta = np.full((nnodes, nt_inter), beta)
 
