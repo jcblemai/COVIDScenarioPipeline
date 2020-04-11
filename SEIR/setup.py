@@ -31,13 +31,19 @@ class SpatialSetup:
         self.nodenames = self.data[nodenames_key].tolist()
         if len(self.nodenames) != len(set(self.nodenames)):
             raise ValueError(f"There are duplicate nodenames in geodata.")
+        print(mobility_file)
 
-        if ('.txt' in mobility_file):
+        if ('.txt' in str(mobility_file)):
             print('Mobility files as matrices are not recommended. Please switch soon to long form csv files.')
             self.mobility = scipy.sparse.csr_matrix(np.loadtxt(mobility_file)) # K x K matrix of people moving
-        elif ('.csv' in mobility_file):
+        elif ('.csv' in str(mobility_file)):
             print('Mobility files as matrices are not recommended. Please switch soon to long form csv files.')
-            self.mobility = scipy.sparse.csr_matrix(np.loadtxt(mobility_file)) # K x K matrix of people moving
+            mobility_data = pd.read_csv(mobility_file)
+            self.mobility = scipy.sparse.csr_matrix((self.nnodes, self.nnodes))
+            for index, row in mobility_data.iterrows():
+                self.mobility[self.nodenames.index(row['ori']),self.nodenames.index(row['dest'])] = row['amount']
+                if (self.nodenames.index(row['ori']) == self.nodenames.index(row['dest'])):
+                    raise ValueError(f"Mobility fluxes with same origin and destination: '{row['ori']}' to {row['dest']} in long form matrix. This is not supported")
         else:
             raise ValueError(f"Mobility data must either be a .csv file in longform (recommended) or a .txt matrix file. Got {mobility_file}")
 
